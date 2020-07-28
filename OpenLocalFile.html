@@ -5,29 +5,30 @@ Author : WeiTingjun
 Description:
 背景：	1. 打开文件时，目录层次太多，需要多次操作才能找到目标文件。例如：D:\Applications\Python38\Lib\site-packages\win32comext\authorization\demos；
 		2. 时间长了，不清楚当初把文件放在哪个目录里；
-		3. 打开无数文件资源管理器，再找目标文件时，需一个个的确认；
+		3. 打开无数文件资源管理器，再找目标文件时，需一个个窗口确认；
 		4. 常用文件目录，每天得重复操作，耗时耗力；
 
 提供功能：
-		1. 解决以上痛点，提高工作效率
+		1. 解决以上痛点，一定程度上提高工作效率；
 		2. 网页式集中管理文件目录，清晰明了；
+		3. 打开文件资源管理器并选中文件夹或者文件；
 		
 操作指南：
 		1. 将本文件放在任意位置(桌面或文件夹)；
 		2. ie浏览器打开；
 		3. 浏览器打开文件时，会提示“在此页上的ActiveX控件和本页上的其他部件的交互可能不安全。你想允许这种交互吗？”，点击“是”；
-
+		   或者修改注册表，关闭该提示【注册表目录：\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Zones\0，
+		   有1201项，修改其DWORD值为零，没有1201项，空白处，右键，新建，DWORD，值为零，再重启浏览器】；
+		
 注意事项：
 		1. 仅支持ie浏览器、windows系统；
 		2. 文件夹名如果是纯数字可能会出问题(例如：D:\Applications\12)，建议修改文件夹名为非纯数字文件夹；
-		3. 不支持打开文件，例如：D:\Applications\test.txt；
-		4. 文件目录不要有名为“urls.txt”的文件
-		
+		3. 页面文件的同级目录不要有名为“urls.txt”文件；		
  -->
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>打开文件资源</title>
+<title>Explorer</title>
 <style>
 
 	td{
@@ -35,8 +36,6 @@ Description:
 	}
 
 </style>
-
-
 </head>
 
 <body  onload="load()">
@@ -44,17 +43,19 @@ Description:
     <thead>
     <tr bgcolor=#96b97d style="height:22pt;">
         <th style="width:40pt;">序号</th>
-        <th>简介</th>
-        <th style="width:500pt;">路径</th>
+        <th style="width:200pt;">简介</th>
+        <th style="width:700pt;">路径</th>
         <th>操作</th>
     </tr>
     </thead>
     <tbody id="tbody">
     <tr id="row0" style="height:20pt;">
         <td class="td" align="center" style="font-size:12pt;">1</td>
-        <td align="center"><input id="declare0" style="border:1px;font-size:12pt;" placeholder="description"></td>
         <td>
-			<input id="url0" style="border:0px;width:500pt;font-size:12pt;" placeholder="请输入文件路径，例如：C:\Program Files (x86)\Google\Temp">
+			<input id="declare0" style="border:1px;width:200pt;font-size:12pt;" placeholder="description">
+		</td>
+        <td>
+			<input id="url0" style="border:0px;width:700pt;font-size:12pt;" placeholder="请输入文件路径，例如：C:\Program Files (x86)\Google\Temp">
 		</td>
         <td>
             <input type="button" id="save0" onclick="saveUrl(this.id);" value="保存">
@@ -67,10 +68,15 @@ Description:
 <div style="height:15pt;"></div>
 <div align="center">
 	<button style="background-color:#96b97d" onclick="plusRow();">
-		新增
+		新增 +
 	</button>
 </div>
 
+<!--
+
+<script src="https://cdn.bootcdn.net/ajax/libs/require.js/2.3.6/require.js"></script>
+
+-->
 
 <script type="text/javascript">
 
@@ -90,7 +96,6 @@ function getRelativePath(){
     var outUrl = array1.join('/');
     return outUrl;
 }
-
 
 //读文件 返回str或array  根据传入的getString值判断
 function getArrayOrStringByReadFile(getString){
@@ -150,9 +155,6 @@ function fileWrite(args){
 	}
 }
 
-
-
-
 //保存路径到文件
 function saveUrl(id){
     try{
@@ -209,16 +211,17 @@ function saveUrl(id){
     }
 }
 
-
 // 处理文件名中间带空格  例如：Program Files
 function handleWhenUrlHasBlank(url){
-//    var Array = url.split(" ");
-//    var newUrl = Array.join("%20");       //文件空格用%20替换,还是不行
-//    var Array1 = newUrl.split('\\');
-//    var newUrl1 = '"'+Array1.join('\\\\')+'"';  //每个\\之间的文件名都加上双引号，复杂处理
-    var newUrl1 = '"'+url+'"';      // 直接“”filepath“”，简单处理
+    //var Array = url.split(" ");
+    //var newUrl = Array.join("%20");       //文件空格用%20替换,还是不行
+    //var Array1 = newUrl.split('\\');
+    //var newUrl1 = '"'+Array1.join('\\\\')+'"';  //每个\\之间的文件名都加上双引号，复杂处理
+    //var newUrl1 = '"'+url+'"';      // 直接“”filepath“”，简单处理
+	var newUrl1 = url;
     return newUrl1;
 }
+
 // 打开指定路径文件管理弹窗
 function openFile(id){
     try{
@@ -232,15 +235,16 @@ function openFile(id){
         var fileName = handleWhenUrlHasBlank(filename);
 		var obj=new ActiveXObject("wscript.shell");     //activex 是微软的，所以只有ie支持
 		if(obj){
-            obj.Run(fileName, 1 , false );  //  ie 可以打开文件资源管理器
+            //obj.Run(fileName, 1 , false );  //  ie 可以打开文件资源管理器，打开后未选中
             //obj=null;
-				}
+			cmdUrl = 'explorer.exe /select,' + fileName;	//使用windows自带的explore.exe的/select参数，打开资源管理器并选中【可以不用“.exe”】
+			obj.run(cmdUrl);	
+		}	
     }
     catch(e){
         alert("Please make sure that url is right...");
     }
 }
-
 
 // 判断是否可以新增一行
 function judgeIsCanAdd(){
@@ -263,7 +267,6 @@ function judgeIsCanAdd(){
     }
     return true;
 }
-
 
 // 表格新增行
 plusRow = function(){
@@ -314,9 +317,7 @@ function refresh(){
     catch(e){
         alert("Make mistakes when flushing...");
     }
-
 }
-
 
 //删除一行
 function deleteRaw(ID){
