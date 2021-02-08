@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 
-Time :  2020/06/12 9:33:00 周五
+Time : 2020-08
 Author : WeiTingjun
 Description:
 背景：	1. 打开文件时，目录层次太多，需要多次操作才能找到目标文件。例如：D:\Applications\Python38\Lib\site-packages\win32comext\authorization\demos；
@@ -17,12 +17,17 @@ Description:
 		1. 将本文件放在任意位置(桌面或文件夹)；
 		2. ie浏览器打开；
 		3. 浏览器打开文件时，会提示“在此页上的ActiveX控件和本页上的其他部件的交互可能不安全。你想允许这种交互吗？”，点击“是”；
-		   或者修改注册表，关闭该提示【注册表目录：\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Zones\0，
-		   有1201项，修改其DWORD值为零，没有1201项，空白处，右键，新建，DWORD，值为零，再重启浏览器】；
+		   或者修改注册表，永久关闭该提示【注册表目录：\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Zones\0，
+		   如果有1201项，修改其DWORD值为零；如果没有1201项，空白处，右键，新建，DWORD，值为零，再重启浏览器】；
+		4. 路径格式如下：
+			本地文件夹：C:\Windows\System32\drivers\etc\hosts
+			本地文件：G:\积微物联\循环管理系统\20200710V0.6.0\外销预发布联调完整脚本.sql
+			共享文件夹：\\10.6.74.188\001_新员工大礼包\002_业务文档\7月\003_废旧物资管理系统APP
+			共享文件：\\10.6.74.188\001_新员工大礼包\005_发版&工时记录\各个版本加班工时及发版记录.xlsx
 		
 注意事项：
 		1. 仅支持ie浏览器、windows系统；
-		2. 文件夹名如果是纯数字可能会出问题(例如：D:\Applications\12)，建议修改文件夹名为非纯数字文件夹；
+		2. 文件夹名如果是纯数字可能会出bug(例如：D:\Applications\12)，建议修改文件夹名为非纯数字文件夹；
 		3. 页面文件的同级目录不要有名为“urls.txt”文件；		
  -->
 <html>
@@ -30,14 +35,528 @@ Description:
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Explorer</title>
 <style>
-
 	td{
 		border-bottom: 1.2px solid blue;
+	}	
+	.progressDiv
+	{
+		visibility:hidden;
 	}
-
+	#progress{
+		width: 300px;
+		height: 10px;
+		background: rgb(255,99,71);
+		/*
+		position:fixed;
+		
+		left:50%;
+		top:50%;
+		visibility:hidden;
+		*/
+		left:75%;
+		position:fixed;
+		visibility:hidden;		
+	}
+	#bar{
+		
+		height: 10px;
+		width: 1%;
+		/*
+		
+		margin-top: 1px;
+		
+		background: purple;
+		background: red;
+		*/
+		background: rgb(0,255,0);
+	}
+	
 </style>
-</head>
+<!--提醒弹窗CSS-->
+<style>
+    .naranja-notification {
+        height: 0;
+        box-sizing: content-box;
+        padding: 10px 0;
+        transition: padding .7s cubic-bezier(0, .5, 0, 1),height .7s cubic-bezier(0, .5, 0, 1)
+    }
 
+    .naranja-notification * {
+        box-sizing: border-box
+    }
+
+    .naranja-notification .narj-log {
+        background-color: #F9F9F9
+    }
+
+    .naranja-notification .narj-log button {
+        border: 1px solid #D2D2D2;
+        background-color: white
+    }
+
+    .naranja-notification .narj-log button:first-of-type {
+        color: #0099E5
+    }
+
+    .naranja-notification .narj-success {
+        background-color: #B8F4BC
+    }
+
+    .naranja-notification .narj-success button {
+        border: 1px solid #6ED69A;
+        background-color: #B8F4BC;
+        opacity: .9;
+        color: #11B674
+    }
+
+    .naranja-notification .narj-success button:first-of-type {
+        opacity: 1
+    }
+
+    .naranja-notification .narj-warn {
+        background-color: #FFDD85
+    }
+
+    .naranja-notification .narj-warn button {
+        border: 1px solid #F5CE69;
+        background-color: #FFDD85;
+        opacity: .9;
+        color: #D9993F
+    }
+
+    .naranja-notification .narj-warn button:first-of-type {
+        opacity: 1
+    }
+
+    .naranja-notification .narj-error {
+        background-color: #ED9286
+    }
+
+    .naranja-notification .narj-error button {
+        border: 1px solid #ED8476;
+        background-color: #ED9286;
+        opacity: .9;
+        color: #C24343
+    }
+
+    .naranja-notification .narj-error button:first-of-type {
+        opacity: 1
+    }
+
+    .naranja-notification .naranja-body-notification {
+        animation: .4s fadeUpIn 1 cubic-bezier(0, .5, 0, 1);
+        position: relative;
+        display: flex;
+        width: 380px;
+        border-radius: 4px;
+        padding: 7px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.16);
+        margin-bottom: 7px;
+        margin-top: 12px;
+        opacity: 1;
+        transition: opacity .15s ease,marginTop .3s ease,marginBottom .3s ease,padding .3s ease
+    }
+
+    .naranja-notification .naranja-body-notification:hover .naranja-close-icon {
+        opacity: .7
+    }
+
+    .naranja-notification .naranja-body-notification:hover .naranja-close-icon:hover {
+        opacity: 1
+    }
+
+    .naranja-notification .naranja-body-notification>div {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-text-and-title {
+        padding-left: 15px;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-text-and-title>p {
+        margin: 5px;
+        font-family: 'Open Sans'
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-text-and-title>div {
+        width: 100%
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-text-and-title>div button {
+        float: right;
+        margin-left: 6px;
+        margin-top: 10px;
+        margin-bottom: 2px;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        -ms-appearance: none;
+        -o-appearance: none;
+        border-radius: 3px;
+        padding: 2px 11px;
+        font-size: 14px;
+        text-align: center;
+        outline: none;
+        border-width: 1px;
+        box-shadow: 0 2px 4px -2px rgba(0,0,0,0.2);
+        cursor: pointer
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-text-and-title>div button:active {
+        opacity: .7
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-title {
+        font-size: 20px;
+        opacity: 1
+    }
+
+    .naranja-notification .naranja-body-notification .naranja-parragraph {
+        font-size: 14px;
+        opacity: .6;
+        padding-right: 30px;
+        line-height: 1.4em
+    }
+
+    .naranja-close-icon {
+        position: absolute;
+        right: 7px;
+        top: 7px;
+        opacity: 0;
+        cursor: pointer;
+        transition: opacity .25s ease
+    }
+
+    @keyframes fadeUpIn {
+        from {
+            opacity: .2;
+            box-shadow: 0 0 0 rgba(0,0,0,0.5);
+            transform: scale(.95)
+        }
+
+        75% {
+            opacity: 1
+        }
+
+        to {
+            opacity: 1;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.16);
+            transform: scale(1)
+        }
+    }
+
+    .naranja-notification-box {
+        box-sizing: content-box;
+        display: flex;
+        flex-direction: column-reverse;
+        position: fixed;
+        //bottom: 0;
+        top: 0;
+        right: 0;
+        width: 410px;
+        height: auto;
+        max-height: 100vh;
+        overflow: hidden;
+        padding: 8px;
+        padding-top: 20px
+    }
+
+    .naranja-notification-box .naranja-notification-advice {
+        position: fixed;
+        right: 138px;
+        top: -39px;
+        transform: translateY(0);
+        cursor: pointer;
+        transition: transform .3s ease
+    }
+
+    .naranja-notification-box .naranja-notification-advice.active {
+        transform: translateY(60px)
+    }
+</style>
+<!--    提醒弹窗js-->
+<script>
+// bip sound
+// http://soundbible.com/mp3/A-Tone-His_Self-1266414414.mp3
+(function (factory) {
+
+  // checking for exports avalible
+  if (typeof module !== 'undefined' && module.exports) {
+    // export Collection
+    module.exports = factory
+  } else {
+    // else add to root variable
+    window['naranja'] = factory
+  }
+
+})
+
+(function () {
+    function setSideUpAnimation (finalNotification) {
+        setTimeout(function () {
+
+            var notificaciónHeight = finalNotification
+            .querySelector('.naranja-body-notification')
+            .offsetHeight
+
+            finalNotification.style.height = notificaciónHeight + 'px'
+        }, 0)
+    }
+
+    function createText (text) {
+        return document.createTextNode(text)
+    }
+
+  /**
+  * provide a reusable way to create html
+  * elements
+  * @param tag String – html tag name
+  * @param classes Array<String> – html tag classes
+  */
+
+    function createElement (tag, classes) {
+        var $HTMLElement = document.createElement(tag)
+        if ( !!classes ) {
+              classes.forEach(function (className) {
+                    $HTMLElement.classList.add(className)
+              })
+        }
+        return $HTMLElement
+    }
+
+  var $narjContainer = document.querySelector('.naranja-notification-box')
+
+  if (!$narjContainer) {
+    $narjContainer = createElement('div', ['naranja-notification-box'])
+    $newNotificationsAdvice = createElement('div', ['naranja-notification-advice'])
+    $newNotificationsAdvice.addEventListener('click', function () {
+      $narjContainer.scrollTop = '0'
+    })
+    $narjContainer.appendChild($newNotificationsAdvice)
+
+    document.body.appendChild($narjContainer)
+  }
+
+  $narjContainer.__proto__.unshifElement = function (node) {
+    this.insertBefore(node, this.childNodes[0])
+  }
+
+  $narjContainer.addEventListener('scroll', function (e) {
+    if (e.currentTarget.scrollTop < 20) {
+      $newNotificationsAdvice.classList.remove('active')
+    }
+  })
+
+  return {
+    log: function (argm) {
+      this.createNotification('log', argm)
+    },
+    success: function (argm) {
+      this.createNotification('success', argm)
+    },
+    warn: function (argm) {
+      this.createNotification('warn', argm)
+    },
+    error: function (argm) {
+      this.createNotification('error', argm)
+    },
+
+    /*
+    * Internal methods for
+    * launch notifications
+    */
+    createNotification: function (type, argm) {
+
+      this.type = type
+      this.title = argm.title
+      this.text = argm.text
+      this.icon = (argm.icon === undefined) ? true : argm.icon
+      this.buttons = argm.buttons
+
+      var $notification = this.$createContainer()
+      var $body = $notification.querySelector('div')
+
+      this.$notification = $notification
+      this.$body = $body
+
+      // render icon if exists
+      if (this.icon) {
+        var $iconContainer = createElement('div', [
+          'naranja-icon',
+          'narj-icon-' + type
+        ])
+
+        $iconContainer.innerHTML = this.chooseIcon[type]
+
+        $body.appendChild($iconContainer)
+      }
+
+      var $title = this.createTitle()
+      var $text = this.createText()
+
+      var $textAndTitleContainer = createElement('div', [
+        'naranja-text-and-title'
+      ])
+
+      $textAndTitleContainer.appendChild($title)
+      $textAndTitleContainer.appendChild($text)
+
+      $body.appendChild($textAndTitleContainer)
+
+      // render buttons fragment if exists
+      if (this.buttons) {
+        var $buttons = this.createButtons($notification, $body)
+
+        $body
+          .querySelector('.naranja-text-and-title')
+          .appendChild($buttons)
+      }
+
+
+      var $close = createElement('div', [
+        'naranja-close-icon'
+      ])
+
+      $close.addEventListener('click', (function () {
+        this.closeNotification()
+      }).bind(this))
+
+      // var $close = document.createElement('div')
+      // $close.classList.add('naranja-close-icon')
+      $close.innerHTML = this.chooseIcon.close
+
+      $body.appendChild($close)
+
+      $narjContainer.unshifElement($notification)
+      setSideUpAnimation($notification)
+
+      if ($narjContainer.scrollTop > 20) {
+        $newNotificationsAdvice.classList.add('active')
+        $newNotificationsAdvice.innerHTML = this.chooseIcon.newNotification
+      }
+
+      if (argm.timeout !== 'keep') {
+        setTimeout(
+          (function () {
+            this.closeNotification()
+          }).bind(this),
+          argm.timeout || 5000
+        )
+      }
+    },
+    $createContainer: function () {
+      // generate box for notification
+
+      var $container = createElement('div', [
+        'naranja-notification',
+        'naranja-' + this.type
+      ])
+
+      var $innerContainer = createElement('div', [
+        'naranja-body-notification',
+        'narj-' + this.type
+      ])
+
+      $container.appendChild($innerContainer)
+
+      return $container
+    },
+    createTitle: function () {
+      var $parragraph = createElement('p', [
+        'naranja-title'
+      ])
+      var $tt = createText(this.title)
+      $parragraph.appendChild($tt)
+
+      return $parragraph
+    },
+    createText: function () {
+      var $title = createElement('p', [
+        'naranja-parragraph'
+      ])
+
+      var $tx = document.createTextNode(this.text)
+      $title.appendChild($tx)
+
+      return $title
+    },
+    createButtons: function ($notification, $body) {
+      var $buttonsContainer = createElement('div', [
+        'naranja-buttons-container'
+      ])
+
+      var self = this
+
+      this.buttons.forEach(function (button) {
+        var $buttonElement = createElement('button')
+        $buttonElement.appendChild(document.createTextNode(button.text))
+
+        $buttonElement.addEventListener('click', function (event) {
+
+          self.removeNotification = true
+          event.preventClose = function () {
+            self.removeNotification = false
+          }
+
+          event.closeNotification = function () {
+            self.closeNotification()
+          }
+
+          button.click(event)
+
+          if (self.removeNotification) self.closeNotification()
+        })
+
+        $buttonsContainer.appendChild($buttonElement)
+      })
+
+      return $buttonsContainer
+    },
+    closeNotification: function () {
+      var self = this
+      if ( !this.elementWasRemoved ) {
+        self.$body.style.opacity = '0'
+        setTimeout(function () {
+          self.$body.style.marginTop = '0px'
+          self.$body.style.marginBottom = '0px'
+          self.$body.style.padding = '0px'
+          self.$notification.style.height = 0 + 'px'
+          self.$notification.style.padding = 0 + 'px'
+          setTimeout(function () {
+            self.$notification
+              .parentNode
+              .removeChild(
+                self.$notification
+              )
+          }, 600);
+          if ($narjContainer.scrollTop < 20) {
+            $newNotificationsAdvice.classList.remove('active')
+          }
+        }, 150)
+      }
+      this.elementWasRemoved = true
+    },
+    chooseIcon: {
+      log: '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="#EEEEEE"/><path d="M26.595 37.5C26.3313 37.9546 25.9528 38.332 25.4973 38.5943C25.0419 38.8566 24.5256 38.9947 24 38.9947C23.4744 38.9947 22.9581 38.8566 22.5027 38.5943C22.0472 38.332 21.6687 37.9546 21.405 37.5M39 31.5H9C10.1935 31.5 11.3381 31.0259 12.182 30.182C13.0259 29.3381 13.5 28.1935 13.5 27V19.5C13.5 16.7152 14.6062 14.0445 16.5754 12.0754C18.5445 10.1062 21.2152 9 24 9C26.7848 9 29.4555 10.1062 31.4246 12.0754C33.3938 14.0445 34.5 16.7152 34.5 19.5V27C34.5 28.1935 34.9741 29.3381 35.818 30.182C36.6619 31.0259 37.8065 31.5 39 31.5V31.5Z" stroke="black" stroke-opacity="0.73" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+
+      success: '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="#6ED69A" fill-opacity="0.62"/><path d="M36 16.5L19.5 33L12 25.5" stroke="#11B674" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+
+      warn: '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="#F5CE69"/><path d="M24 16.5C24.8285 16.5 25.5 17.1716 25.5 18V24C25.5 24.8284 24.8285 25.5 24 25.5C23.1715 25.5 22.5 24.8284 22.5 24V18C22.5 17.1716 23.1715 16.5 24 16.5Z" fill="#DCA14E"/><path d="M25.5 28.5C25.5 27.6716 24.8285 27 24 27C23.1715 27 22.5 27.6716 22.5 28.5V30C22.5 30.8284 23.1715 31.5 24 31.5C24.8285 31.5 25.5 30.8284 25.5 30V28.5Z" fill="#DCA14E"/><path fill-rule="evenodd" clip-rule="evenodd" d="M7.5 24C7.5 14.8873 14.8873 7.5 24 7.5C33.1127 7.5 40.5 14.8873 40.5 24C40.5 33.1127 33.1127 40.5 24 40.5C14.8873 40.5 7.5 33.1127 7.5 24ZM24 10.5C16.5441 10.5 10.5 16.5442 10.5 24C10.5 31.4558 16.5441 37.5 24 37.5C31.4559 37.5 37.5 31.4558 37.5 24C37.5 16.5442 31.4559 10.5 24 10.5Z" fill="#DCA14E"/></svg>',
+
+      error: '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="#ED8476"/><path d="M34.0607 16.0607C34.6465 15.4749 34.6465 14.5251 34.0607 13.9393C33.4749 13.3536 32.5251 13.3536 31.9394 13.9393L24 21.8787L16.0607 13.9393C15.4749 13.3536 14.5251 13.3536 13.9394 13.9393C13.3535 14.5251 13.3535 15.4749 13.9394 16.0607L21.8787 24L13.9394 31.9393C13.3535 32.5251 13.3535 33.4749 13.9394 34.0607C14.5251 34.6464 15.4749 34.6464 16.0607 34.0607L24 26.1213L31.9394 34.0607C32.5251 34.6464 33.4749 34.6464 34.0607 34.0607C34.6465 33.4749 34.6465 32.5251 34.0607 31.9393L26.1213 24L34.0607 16.0607Z" fill="#C54F4F"/></svg>',
+
+      close: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.70711 1.7071C10.0976 1.31659 10.0976 0.683407 9.70711 0.292889C9.31659 -0.0976295 8.68341 -0.0976295 8.29289 0.292889L5 3.58578L1.70711 0.292889C1.31659 -0.0976295 0.68342 -0.0976295 0.292894 0.292889C-0.0976315 0.683407 -0.0976315 1.31659 0.292894 1.7071L3.58579 5L0.292894 8.29289C-0.0976315 8.68341 -0.0976315 9.31659 0.292894 9.7071C0.68342 10.0976 1.31659 10.0976 1.70711 9.7071L5 6.41421L8.29289 9.7071C8.68341 10.0976 9.31659 10.0976 9.70711 9.7071C10.0976 9.31659 10.0976 8.68341 9.70711 8.29289L6.41422 5L9.70711 1.7071Z" fill="black" fill-opacity="0.37"/></svg>',
+
+      newNotification: '<svg width="41" height="41" viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg"><g filter="url(#filter0_d)"><circle cx="20.5" cy="16.5" r="16.5" fill="#C08AE1"/></g><path d="M13 21L21 13L29 21" stroke="black" stroke-opacity="0.6" stroke-width="3"/><defs><filter id="filter0_d" x="0" y="0" width="41" height="41" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/><feOffset dy="4"/><feGaussianBlur stdDeviation="2"/><feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/><feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/><feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/></filter></defs></svg>'
+    }
+  }
+})
+</script>
+</head>
 <body  onload="load()">
 <table class="table" align="center" cellspacing="0">
     <thead>
@@ -55,12 +574,13 @@ Description:
 			<input id="declare0" style="border:1px;width:200pt;font-size:12pt;" placeholder="description">
 		</td>
         <td>
-			<input id="url0" style="border:0px;width:700pt;font-size:12pt;" placeholder="请输入文件路径，例如：C:\Program Files (x86)\Google\Temp">
+			<input id="url0" style="text-align:right;border:0px;width:700pt;font-size:12pt;" placeholder="请输入文件路径，例如：C:\Program Files (x86)\Google\Temp">
 		</td>
         <td>
-            <input type="button" id="save0" onclick="saveUrl(this.id);" value="保存">
-            <input type="button" id="open0" onclick="openFile(this.id);" value="打开">
-            <input type="button" id="delete0" onclick="deleteRaw(this.id);" value="删除">
+            <input type="button" id="save0" onclick="saveUrl(this.id);" value="保存" style = "background-color:#00BFFF">
+            <input type="button" id="open0" onclick="openFile(this.id);" value="打开" style = "background-color:#00FA9A">
+            <input type="button" id="delete0" onclick="deleteRaw(this.id);" value="删除" style = "background-color:#FF6347">
+			<input type="button" id="top0" onclick="toTop(this.id);" value="置顶" style = "background-color:#FFA500">
         </td>
     </tr>
     </tbody>
@@ -71,16 +591,32 @@ Description:
 		新增 +
 	</button>
 </div>
+<!--进度条-->
+<div class="progressDiv1">
+	<div id="progress">
+		<div id="bar"></div>
+	</div>
+</div>
+<!--鼠标跟踪特效，github地址：https://github.com/shuiche-it/cnblog-mouse-->
+<div id="follow-mouse-special-effects">
+	<script src="https://common.cnblogs.com/scripts/jquery-2.2.0.min.js"></script>
+	<script type="text/javascript">
+	"use strict";var _createClass=function(){function n(t,e){for(var i=0;i<e.length;i++){var n=e[i];n.enumerable=n.enumerable||!1,n.configurable=!0,"value"in n&&(n.writable=!0),Object.defineProperty(t,n.key,n)}}return function(t,e,i){return e&&n(t.prototype,e),i&&n(t,i),t}}();function _classCallCheck(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}!function(P){P.extend({shuicheMouse:function(t){(new e).init(t)}});var e=(_createClass(t,[{key:"init",value:function(t){!function(){for(var a=0,t=["webkit","moz"],e=0;e<t.length&&!window.requestAnimationFrame;++e)window.requestAnimationFrame=window[t[e]+"RequestAnimationFrame"],window.cancelAnimationFrame=window[t[e]+"CancelAnimationFrame"]||window[t[e]+"CancelRequestAnimationFrame"];window.requestAnimationFrame||(window.requestAnimationFrame=function(t,e){var i=(new Date).getTime(),n=Math.max(0,16.7-(i-a)),o=window.setTimeout(function(){t(i+n)},n);return a=i+n,o}),window.cancelAnimationFrame||(window.cancelAnimationFrame=function(t){clearTimeout(t)})}(),t&&P.extend(!0,this.defaluts,t);var e=P("<canvas id='shuicheCanvas' style='position: fixed; left: 0px; top: 0px; z-index: 2147483647;pointer-events:none;'></canvas>");P("body").append(e);var i=this.defaluts.type;1<=i&&i<11&&this.mouseType1(this.defaluts.type,this.defaluts.color),11==i&&this.mouseType2(),12==i&&this.mouseType3()}},{key:"mouseType1",value:function(t,e){var n,o,a,h,i=document.getElementById("shuicheCanvas"),s=i.getContext("2d"),r=P("#shuicheCanvas"),l=[],c={n:100,c:222,bc:"#fff",r:.9,o:.05,a:1,s:20},d=0,f=0,u=0,y=0,w=0,p=0,v=0;g();var m,x=360*Math.random();m=e||"hsl("+x+",100%,80%)",P(window).resize(function(){g()});var M=t;function g(){n=window.innerWidth,o=window.innerHeight,i.width=n,i.height=o,a=n/2,h=o/2}P(window).mousemove(function(t){a=t.pageX-r.offset().left,h=t.pageY-r.offset().top,4==M&&(Math.random()<=.5?(d=Math.random()<=.5?-10:n+10,f=Math.random()*o):(f=Math.random()<=.5?-10:o+10,d=Math.random()*n),u=8*(Math.random()-.5),y=8*(Math.random()-.5)),1==M||2==M||3==M?l.push({x:a,y:h,r:c.r,o:1,v:0}):4==M?l.push({x:a,y:h,r:c.r,o:1,v:0,wx:d,wy:f,vx2:u,vy2:y}):6==M&&l.push({x:a+30*(Math.random()-.5),y:h+30*(Math.random()-.5),o:1,wx:a,wy:h})}),function t(){if(1==M){s.clearRect(0,0,n,o);for(var e=0;e<l.length;e++)s.globalAlpha=l[e].o,s.fillStyle=m,s.beginPath(),s.arc(l[e].x,l[e].y,l[e].r,0,2*Math.PI),s.closePath(),s.fill(),l[e].r+=c.r,l[e].o-=c.o,l[e].o<=0&&(l.splice(e,1),e--)}else if(2==M)for(s.clearRect(0,0,n,o),e=0;e<l.length;e++)s.globalAlpha=l[e].o,s.fillStyle=m,s.beginPath(),l[e].r=10,s.shadowBlur=20,s.shadowColor=m,s.arc(l[e].x,l[e].y,l[e].r,0,2*Math.PI),s.closePath(),s.fill(),s.shadowBlur=0,l[e].o-=c.o,l[e].v+=c.a,l[e].y+=l[e].v,(l[e].y>=o+l[e].r||l[e].o<=0)&&(l.splice(e,1),e--);else if(3==M)for(w+=5,s.clearRect(0,0,n,o),e=0;e<l.length;e++)s.globalAlpha=l[e].o,s.fillStyle=m,s.beginPath(),s.shadowBlur=20,s.shadowColor=m,l[e].r=20*(1-l[e].y/o),s.arc(l[e].x,l[e].y,l[e].r,0,2*Math.PI),s.closePath(),s.fill(),s.shadowBlur=0,l[e].o=l[e].y/o,l[e].v+=c.a,l[e].y-=c.s,l[e].x+=10*Math.cos((l[e].y+w)/100),(l[e].y<=0-l[e].r||l[e].o<=0)&&(l.splice(e,1),e--);else if(4==M)for(s.clearRect(0,0,n,o),e=0;e<l.length;e++)s.globalAlpha=l[e].o,s.fillStyle=m,s.beginPath(),s.shadowBlur=20,s.shadowColor=m,l[e].vx2+=(a-l[e].wx)/1e3,l[e].vy2+=(h-l[e].wy)/1e3,l[e].wx+=l[e].vx2,l[e].wy+=l[e].vy2,l[e].o-=c.o/2,l[e].r=10,s.arc(l[e].wx,l[e].wy,l[e].r,0,2*Math.PI),s.closePath(),s.fill(),s.shadowBlur=0,l[e].o<=0&&(l.splice(e,1),e--);else if(5==M)c.c||(m="hsl("+(x+=.1)+",100%,80%)"),s.clearRect(0,0,n,o),p+=10,s.globalAlpha=1,s.fillStyle=m,s.shadowBlur=20,s.shadowColor=m,s.beginPath(),s.arc(a+50*Math.cos(p*Math.PI/180),h+50*Math.sin(p*Math.PI/180),10,0,2*Math.PI),s.closePath(),s.fill(),s.beginPath(),s.arc(a+50*Math.cos((p+180)*Math.PI/180),h+50*Math.sin((p+180)*Math.PI/180),10,0,2*Math.PI),s.closePath(),s.fill(),s.beginPath(),s.arc(a+50*Math.cos((p+90)*Math.PI/180),h+50*Math.sin((p+90)*Math.PI/180),10,0,2*Math.PI),s.closePath(),s.fill(),s.beginPath(),s.arc(a+50*Math.cos((p+270)*Math.PI/180),h+50*Math.sin((p+270)*Math.PI/180),10,0,2*Math.PI),s.closePath(),s.fill(),s.shadowBlur=0;else if(6==M)for(s.clearRect(0,0,n,o),e=0;e<l.length;e++)s.globalAlpha=l[e].o,s.strokeStyle=m,s.beginPath(),s.lineWidth=2,s.moveTo(l[e].x,l[e].y),s.lineTo((l[e].wx+l[e].x)/2+20*Math.random(),(l[e].wy+l[e].y)/2+20*Math.random()),s.lineTo(l[e].wx,l[e].wy),s.closePath(),s.stroke(),l[e].o-=c.o,l[e].o<=0&&(l.splice(e,1),e--);else if(7==M)for(s.clearRect(0,0,n,o),l.length<2*c.n&&(v=2*Math.random()*Math.PI,l.push({x:a+100*(Math.random()-.5)*Math.cos(v),y:h+100*(Math.random()-.5)*Math.cos(v),o:1,h:v})),e=0;e<l.length;e++)s.globalAlpha=l[e].o,s.fillStyle=m,s.beginPath(),l[e].x+=(a-l[e].x)/10,l[e].y+=(h-l[e].y)/10,s.arc(l[e].x,l[e].y,1,0,2*Math.PI),s.closePath(),s.fill(),l[e].o-=c.o,l[e].o<=0&&(l[e].h=2*Math.random()*Math.PI,l[e].x=a+100*(Math.random()-.5)*Math.cos(l[e].h),l[e].y=h+100*(Math.random()-.5)*Math.sin(l[e].h),l[e].o=1);else if(8==M)for(s.clearRect(0,0,n,o),s.fillStyle=m,a%4==0?a+=1:a%4==2?--a:a%4==3&&(a-=2),h%4==0?h+=1:h%4==2?--h:h%4==3&&(h-=2),e=a-60;e<a+60;e+=4)for(var i=h-60;i<h+60;i+=4)Math.sqrt(Math.pow(a-e,2)+Math.pow(h-i,2))<=60&&(s.globalAlpha=1-Math.sqrt(Math.pow(a-e,2)+Math.pow(h-i,2))/60,Math.random()<.2&&s.fillRect(e,i,3,3));else if(9==M)for(s.clearRect(0,0,n,o),s.fillStyle=m,a%4==0?a+=1:a%4==2?--a:a%4==3&&(a-=2),h%4==0?h+=1:h%4==2?--h:h%4==3&&(h-=2),l.length<c.n&&l.push({x:a,y:h,xv:0,yv:0,o:1}),e=0;e<l.length;e++)0==l[e].xv&&0==l[e].yv?Math.random()<.5?Math.random()<.5?l[e].xv=3:l[e].xv=-3:Math.random()<.5?l[e].yv=3:l[e].yv=-3:0==l[e].xv?Math.random()<.66&&(l[e].yv=0,Math.random()<.5?l[e].xv=3:l[e].xv=-3):0==l[e].yv&&Math.random()<.66&&(l[e].xv=0,Math.random()<.5?l[e].yv=3:l[e].yv=-3),l[e].o-=c.o/2,s.globalAlpha=l[e].o,l[e].x+=l[e].xv,l[e].y+=l[e].yv,s.fillRect(l[e].x,l[e].y,3,3),l[e].o<=0&&(l.splice(e,1),e--);else if(10==M)for(s.clearRect(0,0,n,o),s.fillStyle=m,l.push({x:a,y:h,xv:2,yv:1,o:1}),e=0;e<l.length;e++)l[e].o-=c.o/10,s.globalAlpha=l[e].o,l[e].x+=4*(Math.random()-.5),--l[e].y,s.fillRect(l[e].x,l[e].y,2,2),l[e].o<=0&&(l.splice(e,1),e--);window.requestAnimationFrame(t)}()}},{key:"mouseType2",value:function(){var t,o,a,h=window.innerWidth,s=window.innerHeight,i=70,r=1,l=1,c=1.5,n=25,d=.5*h,f=.5*s,u=!1;function e(t){d=t.clientX-.5*(window.innerWidth-h),f=t.clientY-.5*(window.innerHeight-s)}function y(t){u=!0}function w(t){u=!1}function p(t){1==t.touches.length&&(t.preventDefault(),d=t.touches[0].pageX-.5*(window.innerWidth-h),f=t.touches[0].pageY-.5*(window.innerHeight-s))}function v(t){1==t.touches.length&&(t.preventDefault(),d=t.touches[0].pageX-.5*(window.innerWidth-h),f=t.touches[0].pageY-.5*(window.innerHeight-s))}function m(){h=window.innerWidth,s=window.innerHeight,t.width=h,t.height=s}function x(){u?r+=.02*(c-r):r-=.02*(r-l),r=Math.min(r,c),o.clearRect(0,0,o.canvas.width,o.canvas.height);for(var t=0,e=a.length;t<e;t++){var i=a[t],n={x:i.position.x,y:i.position.y};i.offset.x+=i.speed,i.offset.y+=i.speed,i.shift.x+=(d-i.shift.x)*i.speed,i.shift.y+=(f-i.shift.y)*i.speed,i.position.x=i.shift.x+Math.cos(t+i.offset.x)*(i.orbit*r),i.position.y=i.shift.y+Math.sin(t+i.offset.y)*(i.orbit*r),i.position.x=Math.max(Math.min(i.position.x,h),0),i.position.y=Math.max(Math.min(i.position.y,s),0),i.size+=.01*(i.targetSize-i.size),Math.round(i.size)==Math.round(i.targetSize)&&(i.targetSize=1+2*Math.random()),o.beginPath(),o.fillStyle=i.fillColor,o.strokeStyle=i.fillColor,o.lineWidth=i.size,o.moveTo(n.x,n.y),o.lineTo(i.position.x,i.position.y),o.stroke(),o.arc(i.position.x,i.position.y,i.size/2,0,2*Math.PI,!0),o.fill()}window.requestAnimationFrame(x)}(t=document.getElementById("shuicheCanvas"))&&t.getContext&&(o=t.getContext("2d"),window.addEventListener("mousemove",e,!1),window.addEventListener("mousedown",y,!1),window.addEventListener("mouseup",w,!1),document.addEventListener("touchstart",p,!1),document.addEventListener("touchmove",v,!1),window.addEventListener("resize",m,!1),function(){a=[];for(var t=0;t<n;t++){var e={size:1,position:{x:d,y:f},offset:{x:0,y:0},shift:{x:d,y:f},speed:.01+.04*Math.random(),targetSize:1,fillColor:"#"+(9453632*Math.random()+11184810|0).toString(16),orbit:.5*i+.5*i*Math.random()};a.push(e)}}(),m(),x())}},{key:"mouseType3",value:function(){var t=P("<div id='shuicheDiv' style='position: fixed;width: 100%;height: "+P(window).height()+"px; left: 0px; top: 0px; z-index: 2147483647;pointer-events:none;'></div>");P("body").append(t),new(function(){function i(t){return document.getElementById(t)}function t(t,e){this.config=e||{},this.obj=i(t),n=this.config.speed||4,o=this.config.animR||1,a={x:.5*i(t).offsetWidth,y:.5*i(t).offsetHeight},this.setXY(),this.start()}var n,o,a,r=[],l=0;t.prototype={setXY:function(){var t,e;this.obj,t="mousemove",e=function(t){t=t||window.event,console.log(t.clientX),a.x=t.clientX,a.y=t.clientY},window.addEventListener?window.addEventListener(t,e,!1):window.attachEvent("on"+t,function(){e.call(window)})},start:function(){Math.PI;var t,e,i=this.config.fn;r[l++]=t=new c(null,0,0);for(var n=0;n<360;n+=20)for(var o=t,a=10;a<35;a+=1){var h=i(n,a).x,s=i(n,a).y;r[l++]=e=new c(o,h,s),o=e}setInterval(function(){for(var t=0;t<l;t++)r[t].run()},16)}};var c=function(t,e,i){var n=document.createElement("span");this.css=n.style,this.css.backgroundColor="#2D8CF0",this.css.width="2px",this.css.height="2px",this.css.position="absolute",this.css.left="-1000px",this.css.zIndex=1e3-l,document.getElementById("shuicheDiv").appendChild(n),this.ddx=0,this.ddy=0,this.PX=0,this.PY=0,this.x=0,this.y=0,this.x0=0,this.y0=0,this.cx=e,this.cy=i,this.parent=t};return c.prototype.run=function(){this.parent?(this.x0=this.parent.x,this.y0=this.parent.y):(this.x0=a.x,this.y0=a.y),this.x=this.PX+=(this.ddx+=(this.x0-this.PX-this.ddx+this.cx)/o)/n,this.y=this.PY+=(this.ddy+=(this.y0-this.PY-this.ddy+this.cy)/o)/n,this.css.left=Math.round(this.x)+"px",this.css.top=Math.round(this.y)+"px"},t}())("shuicheDiv",{speed:4,animR:2,fn:function(t,e){return{x:e/4*Math.cos(t),y:e/4*Math.sin(t)}}})}},{key:"cnblogs",get:function(){return{canvase:"#shuicheCanvase"}}}]),t);function t(){_classCallCheck(this,t),this.defaluts={type:1,color:!1},this.version="0.0.1"}}(jQuery);
+	</script>
+		
+	<script type="text/javascript">
+	$.shuicheMouse({
+		type:11,
+		color:"rgba(187,67,128,1)"
+	})
+	</script>
+</div>
 
 <!--
-
 <script src="https://cdn.bootcdn.net/ajax/libs/require.js/2.3.6/require.js"></script>
-
 -->
-
 <script type="text/javascript">
-
-var UrlFileName = 'urls.txt';        //文件名
+const UrlFileName = 'urls.txt';        //文件名
 
 // 刷新加载  body标签 onload
 function load()
@@ -121,7 +657,8 @@ function getArrayOrStringByReadFile(getString){
 		return urlsArray;
 	}
 	catch(e){
-		alert("mistake when saving...");
+		//alert("mistake when saving...");
+        notice('error','mistake when saving...')
 	}
 	finally{
 		fopen.Close();
@@ -147,7 +684,8 @@ function fileWrite(args){
 		return true;
 	}
 	catch(e){
-		alert("mistake when saving...");
+		//alert("mistake when saving...");
+        notice('error','mistake when saving...')
 		return false;
 	}
 	finally{
@@ -164,7 +702,8 @@ function saveUrl(id){
         var declare = document.getElementById("declare"+num).value;
         var url = document.getElementById("url"+num).value;
         if(url==""){
-            alert("Sorry, Your url isn't correct...");
+           // alert("Sorry, Your url isn't correct...");
+           notice('warn',"Sorry, Your url isn't correct...")
         }
         else{
 			var str1 = getArrayOrStringByReadFile();
@@ -172,7 +711,7 @@ function saveUrl(id){
             var indexs = str1.match(regExp);
             if(indexs !=null && indexs.indexOf(","+index+',') != -1){
 				var urlsArray = getArrayOrStringByReadFile(getString=false);
-                for(var i=0;i<urlsArray.length;i++){
+                for(let i=0;i<urlsArray.length;i++){
                     var arrayIndex = urlsArray[i].match(regExp);
                     if(arrayIndex==(","+index+",")){
                         var mDeclare = document.getElementById("declare"+num).value;
@@ -182,32 +721,34 @@ function saveUrl(id){
                         subArr.splice(3,1,mUrl);
                         var urlStr = subArr.join(',');
                         urlsArray.splice(i,1,urlStr);
-						
-						
 						if(fileWrite(urlsArray)){
-							alert("succeed...");
+							//alert("succeed...");
+                            notice('success','succeed...')
 						}
 						else{
-							alert("Mistake when saving...");
+							//alert("Mistake when saving...");
+                            notice('error','Mistake when saving...')
 						}
                         return;
                     }
                 }
-
             }
             else{
 				var urlInfo = ","+index+","+declare+","+url;
 				if(fileWrite(urlInfo)){
-					alert("succeed...");
+					//alert("succeed...");
+                    notice('success','succeed...')
 				}
 				else{
-					alert("Mistake when saving...");
+					//alert("Mistake when saving...");
+                    notice('error','Mistake when saving...')
 				}
             }
         }
     }
     catch(e){
-           alert("Make mistakes when saving...");
+           //alert("Make mistakes when saving...");
+           notice('error','Mistake when saving...')
     }
 }
 
@@ -227,11 +768,21 @@ function openFile(id){
     try{
     	var regexp = /[0-9]+/g;   //  /g 代表全局匹配，不是说匹配到一个就结束  /i 区分大小写
 		var num = id.match(regexp);
+
 		var filename = document.getElementById("url"+num).value;
 		if(filename==""){
-		    alert("File path is null...");
+		    //alert("File path is null...");
+            notice("warn","File path is null...")
 		    return;
 		}
+		document.getElementById('progress').style.visibility='visible';
+		var mTop = getTop(document.getElementById("url"+num));		//获取绝对高度
+		var mHeight = document.getElementById("url"+num).offsetHeight; //获取元素自身高度
+		var mLeft =  getLeft(document.getElementById("url"+num));  //获取绝对宽度		
+		document.getElementById('progress').style.top = (mTop+(mHeight/2)-5)+'px'; //加载进度条的绝对高度
+		document.getElementById('progress').style.left = mLeft+'px';		//加载进度条的绝对宽度		
+		let tnum = 1;
+		loadProgress();  //进度条控制
         var fileName = handleWhenUrlHasBlank(filename);
 		var obj=new ActiveXObject("wscript.shell");     //activex 是微软的，所以只有ie支持
 		if(obj){
@@ -239,11 +790,25 @@ function openFile(id){
             //obj=null;
 			cmdUrl = 'explorer.exe /select,' + fileName;	//使用windows自带的explore.exe的/select参数，打开资源管理器并选中【可以不用“.exe”】
 			obj.run(cmdUrl);	
-		}	
+		}
     }
     catch(e){
-        alert("Please make sure that url is right...");
+        //alert("Please make sure that url is right...");
+        notice('error','Please make sure that url is right...')
     }
+}
+
+//进度条控制
+function loadProgress(){	
+	let iSpeed=1;
+	obj=setInterval(function(){		
+		iSpeed+=1;
+		if(iSpeed>=33){    // 达到进度条宽度就停止
+			clearInterval(obj); //清空setInterval 设置的timeout，停止执行
+			document.getElementById('progress').style.visibility='hidden';
+			}
+		bar.style.width=iSpeed*3+'%';					
+	},50);    // 0.05s后函数执行一次
 }
 
 // 判断是否可以新增一行
@@ -251,18 +816,21 @@ function judgeIsCanAdd(){
     var t = document.getElementById("tbody");    //获取表格对象
     var rowsNom = t.rows.length;    //获取当前表格总行数
     if(document.getElementById("url"+(rowsNom-1)).value == ''){
-        alert("Input previous row's file path and save...");
+        //alert("Please input previous row's file path and save...");
+        notice('warn',"Please input previous row's file path and save...")
         return;
     }
 	var str1 = getArrayOrStringByReadFile();
     var regExp = /,[0-9]+,/g;       //隐藏一个bug，如果delare也是数字就完了，哈哈
     var indexs = str1.match(regExp);
     if(indexs == null){
-        alert("Please save revious row...");
+        //alert("Please save revious row...");
+        notice('warn','Please save revious row...')
         return;
     }
     if(indexs !=null && indexs.indexOf(","+rowsNom+',') == -1){
-        alert("Please save revious row...");
+        //alert("Please save revious row...");
+        notice('warn','Please save revious row...')
         return;
     }
     return true;
@@ -286,9 +854,11 @@ plusRow = function(){
         x.getElementsByTagName("td")[3].getElementsByTagName("input")[0].id="save"+rowsNom;
         x.getElementsByTagName("td")[3].getElementsByTagName("input")[1].id="open"+rowsNom;
         x.getElementsByTagName("td")[3].getElementsByTagName("input")[2].id="delete"+rowsNom;
+        x.getElementsByTagName("td")[3].getElementsByTagName("input")[3].id="top"+rowsNom;
     }
     catch(e){
-        alert("Make mistakes when adding...");
+        //alert("Make mistake when adding...");
+        notice('error','Make mistake when adding...')
     }
 }
 
@@ -296,7 +866,7 @@ plusRow = function(){
 function refresh(){
     try{
 		var urlsArray = getArrayOrStringByReadFile(getString=false);
-        for(var i=0;i<urlsArray.length;i++){
+        for(let i=0;i<urlsArray.length;i++){
                 var subArray = urlsArray[i].split(',').slice(1,4);
                 var index = subArray[0];
                 var declare = subArray[1];
@@ -315,7 +885,8 @@ function refresh(){
         }
     }
     catch(e){
-        alert("Make mistakes when flushing...");
+        //alert("Make mistake when flushing...");
+        notice('error','Make mistake when flushing...')
     }
 }
 
@@ -325,56 +896,174 @@ function deleteRaw(ID){
         var regExp = /[0-9]+/g;
         var id = parseInt(ID.match(regExp));
         var url = document.getElementById("url"+id).value;
-        if(url == ""){
-            alert("Can't delete...");
-            return;
-        }
-		var urlsArray = getArrayOrStringByReadFile(getString=false);
-        for(var i=0;i<urlsArray.length;i++){
-            var regExp1 = /,[0-9]+,/g;
-            var arrayIndex = urlsArray[i].match(regExp1);
-            if(arrayIndex==(","+(id+1)+",")){
-                var subArrayPre = [];
-                var subArrayPos = [];
-                if(i == urlsArray.length-1){
-                    var newArrayUrl = urlsArray.slice(0,i);
-                    break;
+		if(url == ""){
+			//alert("Can't delete...");
+			notice('warn',"Failed, file path is null...")
+			return;
+		}
+        let res = confirm('确定删除数据？' + '\n' + url);
+        if(res){
+                var urlsArray = getArrayOrStringByReadFile(getString=false);
+                for(let i=0;i<urlsArray.length;i++){
+                    var regExp1 = /,[0-9]+,/g;
+                    var arrayIndex = urlsArray[i].match(regExp1);
+                    if(arrayIndex==(","+(id+1)+",")){
+                        var subArrayPre = [];
+                        var subArrayPos = [];
+                        if(i == urlsArray.length-1){
+                            var newArrayUrl = urlsArray.slice(0,i);
+                            break;
+                        }
+                        if(i==0){
+                            subArrayPos = urlsArray.slice(i+1,urlsArray.length);
+                        }
+                        else{
+                            var subArrayPre = urlsArray.slice(0,i);
+                            var subArrayPos = urlsArray.slice(i+1,urlsArray.length);
+                        }
+                        for(var k=0;k<subArrayPos.length;k++){
+                            var subIndex = subArrayPos[k].match(regExp1);
+                            var subIndex1 = parseInt(subIndex[0].match(regExp))-1;
+                            var str = subArrayPos[k].split(",");
+                            str.splice(1,1,subIndex1);
+                            var s = str.join(',');
+                            subArrayPos.splice(k,1,s);
+                        }
+                        var newArrayUrl = subArrayPre.concat(subArrayPos);
+                        break;
+                    }
                 }
-                if(i==0){
-                    subArrayPos = urlsArray.slice(i+1,urlsArray.length);
+                if(newArrayUrl != null){
+                    if(fileWrite(newArrayUrl)){
+                        //alert("Delete succeed...");
+                        location.reload();
+                        notice('success','Delete succeed...');
+                        return;
+                    }
+                    else{
+                        //alert("Delete failed...");
+                        notice('error','Delete failed...')
+                    }
                 }
-                else{
-                    var subArrayPre = urlsArray.slice(0,i);
-                    var subArrayPos = urlsArray.slice(i+1,urlsArray.length);
-                }
-                for(var k=0;k<subArrayPos.length;k++){
-                    var subIndex = subArrayPos[k].match(regExp1);
-                    var subIndex1 = parseInt(subIndex[0].match(regExp))-1;
-                    var str = subArrayPos[k].split(",");
-                    str.splice(1,1,subIndex1);
-                    var s = str.join(',');
-                    subArrayPos.splice(k,1,s);
-                }
-                var newArrayUrl = subArrayPre.concat(subArrayPos);
-                break;
+                //alert("Url hasn't been saved...");
+                notice('warn',"Url hasn't been saved...")
             }
         }
-        if(newArrayUrl != null){
+    catch(e){
+        //alert("Make mistakes when deleting...");
+        notice('error','Make mistakes when deleting...')
+    }
+}
+
+//置顶
+function toTop(ID){
+    try{
+        var regExp = /[0-9]+/g;
+        var id = parseInt(ID.match(regExp));
+		var url = document.getElementById("url"+id).value;
+		if(url == ""){
+			//alert("Can't delete...");
+			notice('warn',"Failed, file path is null...")
+			return;
+		}
+		var urlsArray = getArrayOrStringByReadFile(getString=false);
+		for(let i=0;i<urlsArray.length;i++){
+			var regExp1 = /,[0-9]+,/g;
+			var arrayIndex = urlsArray[i].match(regExp1);
+			if(arrayIndex==(","+(id+1)+",")){
+				var subArrayPre = [];
+				var subArrayPos = [];
+				if(id==0){
+					//subArrayPos = urlsArray.slice(i+1,urlsArray.length);
+					notice('log',"Already being top....");
+					return;
+				}
+				if(i == urlsArray.length-1){
+					var subArrayPre = urlsArray.slice(0,i);
+					//break;
+				}
+				else{
+					var subArrayPre = urlsArray.slice(0,i);
+					var subArrayPos = urlsArray.slice(i+1,urlsArray.length);
+				}
+				for(var k=0;k<subArrayPre.length;k++){
+					var subIndex = subArrayPre[k].match(regExp1);
+					var subIndex1 = parseInt(subIndex[0].match(regExp))+1;
+					var str = subArrayPre[k].split(",");
+					str.splice(1,1,subIndex1);
+					var s = str.join(',');
+					subArrayPre.splice(k,1,s);
+				}
+				var newArrayUrl = subArrayPre.concat(subArrayPos);
+				//newArrayUrl = newArrayUrl.splice(0,0,urlsArray[i]);
+				var chooseRowStrArray = urlsArray[i].split(",");
+				chooseRowStrArray.splice(1,1,1);
+				var chooseROwStr = chooseRowStrArray.join(',');
+				newArrayUrl.splice(0,0,chooseROwStr);
+				break;
+			}
+		}
+		if(newArrayUrl != null){
 			if(fileWrite(newArrayUrl)){
-				alert("Delete succeed...");
 				location.reload();
+				notice('success','To top succeed...');
 				return;
 			}
 			else{
-				alert("Delete failed...");
-			}     
+				notice('error','To top failed...')
+			}
+		}
+		notice('warn',"Url hasn't been saved...")
         }
-        alert("Url hasn't been saved...");
-    }
     catch(e){
-        alert("Make mistakes when deleting...");
+        notice('error','Make mistakes when to top...')
     }
 }
+
+//获取绝对高度	
+function getTop(e){
+	var offset=e.offsetTop;
+	if(e.offsetParent!=null) offset+=getTop(e.offsetParent);
+	return offset;
+}
+
+//获取绝对宽度
+function getLeft(e){
+	var offset=e.offsetLeft;
+	if(e.offsetParent!=null) offset+=getLeft(e.offsetParent);
+	return offset;
+}
+
+
+//各种通知类型弹窗
+function notice(type,msg) {
+    let text
+    switch(type){
+        case 'log':
+            //text = "默认通知";
+            text = msg;
+            break;        
+        case 'success':
+            //text = "成功";
+            text = msg;
+            break;
+        case 'warn':
+           // text = "警告";
+            text = msg;
+            break;
+        case 'error':
+            //text = "失败";
+            text = msg;
+            break;
+    }
+    naranja()[type]({
+    title: 'message',
+    text: text,
+    //timeout: 'keep',
+    timeout: 6000,
+    buttons: []
+  })
+ }
 </script>
 </body>
 </html>
